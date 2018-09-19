@@ -1,0 +1,62 @@
+version: '3.0'
+
+services:
+
+  master:
+    image: mjhea0/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.master.Master -h master
+    hostname: master
+    environment:
+      MASTER: spark://master:7077
+      SPARK_CONF_DIR: /conf
+      SPARK_PUBLIC_DNS: 127.0.0.1
+    volumes:
+      - /home/docker:/tmp
+      - ./conf/master:/conf
+    ports:
+      - 18080:18080
+      - 4040:4040
+      - 6066:6066
+      - 7077:7077
+      - 8080:8080
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  worker:
+    image: mjhea0/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://master:7077
+    hostname: worker
+    environment:
+      SPARK_CONF_DIR: /conf
+      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: "1536M"
+      SPARK_PUBLIC_DNS: 127.0.0.1
+    volumes:
+      - /home/docker:/tmp
+      - ./conf/worker:/conf
+    depends_on:
+      - master
+    ports:
+      - 8081:8081
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  history:
+     image: catawiki/docker-spark
+     command: bin/spark-class org.apache.spark.deploy.history.HistoryServer
+     hostname: history
+     environment:
+       SPARK_CONF_DIR: /conf
+     expose:
+       - 18080
+     ports:
+       - 18080:18080
+     volumes:
+       - /home/docker:/tmp
+       - ./conf/history:/conf
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+

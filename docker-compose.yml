@@ -1,0 +1,60 @@
+version: '3.0'
+
+services:
+
+  master:
+    image: mjhea0/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.master.Master -h master
+    hostname: master
+    environment:
+      MASTER: spark://master:7077
+      SPARK_CONF_DIR: /conf
+      SPARK_PUBLIC_DNS: 127.0.0.1
+    volumes:
+      - ./code:/tmp/code
+      - ./data:/tmp/data
+      - ./spark-events:/tmp/spark-events
+      - ./conf/master:/conf
+    ports:
+      - 4040:4040
+      - 6066:6066
+      - 7077:7077
+      - 8080:8080
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  worker:
+    image: mjhea0/spark:latest
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://master:7077
+    hostname: worker
+    environment:
+      SPARK_CONF_DIR: /conf
+      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: "1536M"
+      SPARK_PUBLIC_DNS: 127.0.0.1
+    volumes:
+      - ./code:/tmp/code
+      - ./data:/tmp/data
+      - ./spark-events:/tmp/spark-events
+      - ./conf/worker:/conf
+    depends_on:
+      - master
+    ports:
+      - 8081:8081
+
+  history:
+     image: mjhea0/spark:latest
+     command: bin/spark-class org.apache.spark.deploy.history.HistoryServer
+     hostname: history
+     environment:
+       SPARK_CONF_DIR: /conf
+     ports:
+       - 18080:18080
+     volumes:
+       - ./conf/history:/conf
+       - ./spark-events:/tmp/spark-events
+     deploy:
+       placement:
+         constraints: [node.role == manager]
+
